@@ -10,7 +10,7 @@ import numpy
 import time
 
 root = 0
-n = 6
+n = 100
 
 ### Creating Comm Protocol
 comm = MPI.COMM_WORLD
@@ -32,16 +32,9 @@ Brproc = Br
 Cr = numpy.zeros([n_in_proc[rank], n], dtype=int)
 
 
-print(" ", rank, "Ar\n", Ar)
-print(" ", rank, "Br\n", Br)
-print(" ", rank, "Cr\n", Cr)
-print()
-
-
 ### Step Iteration
 start = time.time()
 for t in range(0, p):
-    print()
     SPROC = (rank+t) % p
     RPROC = (rank-t+p) % p
     #ORIGIN = (rank-t+p) % p
@@ -52,21 +45,18 @@ for t in range(0, p):
         rreq = comm.Irecv(Brproc, source=RPROC, tag=rank)
         sreq.wait()
         rreq.wait()
-        
-        #print("At", rank, "Ar\n", Ar)
-        #print()
-        #print(rank, "received Brproc from", RPROC, "size =", n_in_proc[RPROC],"\n", Brproc)
+
+    
+    location = 0
+    if RPROC != 0:
+        for o in range(0, RPROC):
+            location += n_in_proc[o]
         
     for i in range(0, n_in_proc[rank]):
         for j in range(0, n_in_proc[RPROC]):
             for k in range(0, n):
-                location = RPROC*n_in_proc[RPROC]
-                # print("Current rank:", rank, "Brproc from", RPROC, "; location =", location)
-                # print("t =", t, "; i =", i, "; k =", k, "; j =", j, "; n_in_proc[RPROC] =", n_in_proc[RPROC])
                 Cr[i, j+location] += Ar[i, k]*Brproc[k, j]
-                #print(Cr)
             
-
 
 ### Gather blocks from processors
 C = comm.gather(Cr, root=0)
@@ -80,4 +70,3 @@ time_list = comm.gather(duration, root=0)
 if rank == 0:
     time = max(time_list)
     print(time)
-    print(C)
