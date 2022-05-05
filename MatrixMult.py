@@ -10,7 +10,7 @@ import numpy
 import time
 
 root = 0
-n = 800
+n = 6
 
 ### Creating Comm Protocol
 comm = MPI.COMM_WORLD
@@ -23,7 +23,7 @@ mod = n%p
 n_in_proc = [int(n/p) for i in range(0, p)]
 for rem in range(mod):
     n_in_proc[rem] += 1
-
+    
 
 ### Generating Sub-Matrices
 Ar = numpy.random.randint(5, size=n_in_proc[rank]*n).reshape(n_in_proc[rank], n)
@@ -32,26 +32,40 @@ Brproc = Br
 Cr = numpy.zeros([n_in_proc[rank], n], dtype=int)
 
 
+print(" ", rank, "Ar\n", Ar)
+print(" ", rank, "Br\n", Br)
+print(" ", rank, "Cr\n", Cr)
+print()
+
+
 ### Step Iteration
 start = time.time()
 for t in range(0, p):
+    print()
     SPROC = (rank+t) % p
     RPROC = (rank-t+p) % p
+    #ORIGIN = (rank-t+p) % p
+    
     if t != 0:
-        '''
-        comm.send(Br, dest=SPROC, tag=SPROC)
-        Brproc = comm.recv(source=RPROC, tag=rank)       
-        '''
+        Brproc = numpy.zeros([n, n_in_proc[RPROC]], dtype=int)
         sreq = comm.Isend(Br, dest=SPROC, tag=SPROC)
         rreq = comm.Irecv(Brproc, source=RPROC, tag=rank)
         sreq.wait()
         rreq.wait()
         
+        #print("At", rank, "Ar\n", Ar)
+        #print()
+        #print(rank, "received Brproc from", RPROC, "size =", n_in_proc[RPROC],"\n", Brproc)
         
-    for i in range(0, int(n/p)):
-        for j in range(0, int(n/p)):
+    for i in range(0, n_in_proc[rank]):
+        for j in range(0, n_in_proc[RPROC]):
             for k in range(0, n):
-                Cr[i, j+RPROC*int(n/p)] += Ar[i, k]*Brproc[k, j]
+                location = RPROC*n_in_proc[RPROC]
+                # print("Current rank:", rank, "Brproc from", RPROC, "; location =", location)
+                # print("t =", t, "; i =", i, "; k =", k, "; j =", j, "; n_in_proc[RPROC] =", n_in_proc[RPROC])
+                Cr[i, j+location] += Ar[i, k]*Brproc[k, j]
+                #print(Cr)
+            
 
 
 ### Gather blocks from processors
