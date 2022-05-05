@@ -10,7 +10,7 @@ import numpy
 import time
 
 root = 0
-n = 5
+n = 100
 
 ### Creating Comm Protocol
 comm = MPI.COMM_WORLD
@@ -31,8 +31,9 @@ Br = numpy.random.randint(5, size=n_in_proc[rank]*n).reshape(n, n_in_proc[rank])
 Brproc = Br
 Cr = numpy.zeros([n_in_proc[rank], n], dtype=int)
 
-print(rank, Ar)
-print(rank, Br)
+
+# print(rank, Ar)
+# print(rank, Br)
 
 ### Step Iteration
 start = time.time()
@@ -47,12 +48,11 @@ for t in range(0, p):
         rreq = comm.Irecv(Brproc, source=RPROC, tag=rank)
         sreq.wait()
         rreq.wait()
-
     
     location = 0
     if RPROC != 0:
-        for o in range(0, RPROC):
-            location += n_in_proc[o]
+        l = n_in_proc[0:RPROC]
+        location = sum(l)
         
     for i in range(0, n_in_proc[rank]):
         for j in range(0, n_in_proc[RPROC]):
@@ -72,4 +72,4 @@ time_list = comm.gather(duration, root=0)
 if rank == 0:
     time = max(time_list)
     print(time)
-    print(C)
+    # print(C)
